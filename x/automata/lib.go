@@ -7,12 +7,11 @@ import (
 	"github.com/pluveto/ankiterm/x/xslices"
 )
 
-
 type Automata struct {
-	client ankicc.Client
-	deck *ankicc.DeckStat
-	card *ankicc.CurrentCard
-	reviewing bool
+	client     ankicc.Client
+	deck       *ankicc.DeckStat
+	card       *ankicc.CurrentCard
+	reviewing  bool
 	needAnswer bool
 }
 
@@ -22,15 +21,15 @@ func NewAutomata(client ankicc.Client) *Automata {
 	}
 }
 
-func (m* Automata) CurrentCard() *ankicc.CurrentCard {
+func (m *Automata) CurrentCard() *ankicc.CurrentCard {
 	return m.card
 }
 
-func (m* Automata) AllowReview() bool {
+func (m *Automata) AllowReview() bool {
 	return m.deck == nil
 }
 
-func (m* Automata) StartReview(deck string) error {
+func (m *Automata) StartReview(deck string) error {
 	if !m.AllowReview() {
 		return errors.New("already reviewing")
 	}
@@ -48,7 +47,7 @@ func (m* Automata) StartReview(deck string) error {
 	return nil
 }
 
-func (m* Automata) NextCard() (card *ankicc.CurrentCard, err error) {
+func (m *Automata) NextCard() (card *ankicc.CurrentCard, err error) {
 	if !m.reviewing {
 		return nil, errors.New("not reviewing")
 	}
@@ -67,7 +66,7 @@ func (m* Automata) NextCard() (card *ankicc.CurrentCard, err error) {
 	return card, nil
 }
 
-func (m* Automata) AnswerCard(ease int) (err error) {
+func (m *Automata) AnswerCard(ease int) (err error) {
 	if !m.reviewing {
 		return errors.New("not reviewing")
 	}
@@ -94,7 +93,7 @@ func (m* Automata) AnswerCard(ease int) (err error) {
 	return nil
 }
 
-func (m* Automata) StopReview() error {
+func (m *Automata) StopReview() error {
 	if !m.reviewing {
 		return errors.New("not reviewing")
 	}
@@ -104,4 +103,8 @@ func (m* Automata) StopReview() error {
 	m.deck = nil
 	m.card = nil
 	return nil
+}
+
+func (m *Automata) NeedsAnswer() bool {
+	return m.needAnswer
 }

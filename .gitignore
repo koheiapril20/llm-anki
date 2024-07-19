@@ -16,3 +16,6 @@
 *.log
 
 dist/
+
+# Env file
+.env

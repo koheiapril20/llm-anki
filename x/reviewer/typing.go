@@ -8,6 +8,7 @@ const (
 	ActionAnswer = "answer"
 	ActionSkip   = "skip"
 	ActionAbort  = "abort"
+	ActionNext   = "next"
 )
 
 type Action interface {
@@ -36,6 +37,13 @@ func (a AbortAction) GetCode() string {
 	return ActionAbort
 }
 
+type NextAction struct {
+}
+
+func (a NextAction) GetCode() string {
+	return ActionNext
+}
+
 func ActionFromString(input string) Action {
 	i, err := strconv.Atoi(input)
 	if err == nil {
@@ -47,6 +55,8 @@ func ActionFromString(input string) Action {
 		return SkipAction{}
 	case "a":
 		return AbortAction{}
+	case "n":
+		return NextAction{}
 	default:
 		return nil
 	}
