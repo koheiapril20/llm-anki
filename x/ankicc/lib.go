@@ -3,9 +3,11 @@ package ankicc
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"net/http"
+	"regexp"
 	"time"
 )
 
@@ -54,10 +56,6 @@ type RespDeckGetDeckStats struct {
 	Result RespDeckGetDeckStatsResult `json:"result"`
 }
 
-type RespMediaRetrieveMediaFile struct {
-	Result string `json:"result"`
-}
-
 type RespMiscellaneousVersion struct {
 	Result string `json:"result"`
 }
@@ -66,27 +64,31 @@ type RespGraphicalDeckNames struct {
 	Result []string `json:"result"`
 }
 
+type CardField struct {
+	Order int    `json:"order"`
+	Value string `json:"value"`
+}
+
 type CurrentCard struct {
-	Answer     string `json:"answer"`
-	Buttons    []int  `json:"buttons"`
-	CardID     int64  `json:"cardId"`
-	CSS        string `json:"css"`
-	DeckName   string `json:"deckName"`
-	FieldOrder int    `json:"fieldOrder"`
-	Fields     struct {
-		Back struct {
-			Order int    `json:"order"`
-			Value string `json:"value"`
-		} `json:"Back"`
-		Front struct {
-			Order int    `json:"order"`
-			Value string `json:"value"`
-		} `json:"Front"`
-	} `json:"fields"`
-	ModelName   string   `json:"modelName"`
-	NextReviews []string `json:"nextReviews"`
-	Question    string   `json:"question"`
-	Template    string   `json:"template"`
+	Answer      string               `json:"answer"`
+	Buttons     []int                `json:"buttons"`
+	CardID      int64                `json:"cardId"`
+	CSS         string               `json:"css"`
+	DeckName    string               `json:"deckName"`
+	FieldOrder  int                  `json:"fieldOrder"`
+	Fields      map[string]CardField `json:"fields"`
+	ModelName   string               `json:"modelName"`
+	NextReviews []string             `json:"nextReviews"`
+	Question    string               `json:"question"`
+	Template    string               `json:"template"`
+}
+
+func (c *CurrentCard) GetAudioFilenames() []string {
+	var files []string
+	for _, field := range c.Fields {
+		files = append(files, ExtractAudioFiles(field.Value)...)
+	}
+	return files
 }
 
 type RespGraphicalGuiCurrentCard struct {
@@ -221,7 +223,7 @@ func (c Client) GetDeckStat(deck string) (DeckStat, error) {
 	return result.Result[deck], nil
 }
 
-func (c Client) RetrieveMediaFile(fileName string) (string, error) {
+func (c Client) RetrieveMediaFile(fileName string) ([]byte, error) {
 	body := map[string]interface{}{
 		"action": "retrieveMediaFile",
 		"params": map[string]string{
@@ -230,20 +232,13 @@ func (c Client) RetrieveMediaFile(fileName string) (string, error) {
 	}
 	result, err := c.request(body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-
-	var respData RespMediaRetrieveMediaFile
-	jsonData, err := json.Marshal(result)
+	data, err := base64.StdEncoding.DecodeString(result.(string))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	err = json.Unmarshal(jsonData, &respData)
-	if err != nil {
-		return "", err
-	}
-
-	return respData.Result, nil
+	return data, nil
 }
 
 func (c Client) Version() (string, error) {
@@ -295,7 +290,6 @@ func (c Client) GuiCurrentCard() (*CurrentCard, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	var respData CurrentCard
 	jsonData, err := json.Marshal(result)
 	if err != nil {
@@ -305,7 +299,6 @@ func (c Client) GuiCurrentCard() (*CurrentCard, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return &respData, nil
 }
 
@@ -326,4 +319,18 @@ func (c Client) GuiAnswerCard(ease int) (err error) {
 	}
 	_, err = c.request(body)
 	return
+}
+
+func ExtractAudioFiles(input string) []string {
+	re := regexp.MustCompile(`\[sound:(.+?)\]`)
+	matches := re.FindAllStringSubmatch(input, -1)
+	var result []string
+	if matches != nil {
+		for _, match := range matches {
+			if len(match) > 1 {
+				result = append(result, match[1])
+			}
+		}
+	}
+	return result
 }

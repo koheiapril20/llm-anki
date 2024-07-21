@@ -159,7 +159,9 @@ func (r *ChatGPTReviewer) Execute(deck string) (err error) {
 				Role:    openai.ChatMessageRoleAssistant,
 				Content: reply,
 			})
+			r.am.PlayAudio()
 			r.awaitActionAnswer()
+			r.am.StopAudio()
 			continue
 		}
 
@@ -176,6 +178,7 @@ func (r *ChatGPTReviewer) Execute(deck string) (err error) {
 				if _, err := r.am.NextCard(); err != nil {
 					return err
 				}
+				fmt.Println(r.am.CurrentCard().GetAudioFilenames())
 				fmt.Printf("Question: %s\n", format(r.am.CurrentCard().Question))
 				break
 			case reviewer.ActionAnswer:

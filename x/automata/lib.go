@@ -4,15 +4,17 @@ import (
 	"errors"
 
 	"github.com/pluveto/ankiterm/x/ankicc"
+	"github.com/pluveto/ankiterm/x/media"
 	"github.com/pluveto/ankiterm/x/xslices"
 )
 
 type Automata struct {
-	client     ankicc.Client
-	deck       *ankicc.DeckStat
-	card       *ankicc.CurrentCard
-	reviewing  bool
-	needAnswer bool
+	client      ankicc.Client
+	deck        *ankicc.DeckStat
+	card        *ankicc.CurrentCard
+	audioPlayer media.AudioPlayer
+	reviewing   bool
+	needAnswer  bool
 }
 
 func NewAutomata(client ankicc.Client) *Automata {
@@ -55,7 +57,7 @@ func (m *Automata) NextCard() (card *ankicc.CurrentCard, err error) {
 	if m.needAnswer {
 		return nil, errors.New("need answer first")
 	}
-
+	m.audioPlayer = nil
 	card, err = m.client.GuiCurrentCard()
 	if err != nil {
 		return nil, err
@@ -64,6 +66,28 @@ func (m *Automata) NextCard() (card *ankicc.CurrentCard, err error) {
 	m.card = card
 	m.needAnswer = true
 	return card, nil
+}
+
+func (m *Automata) PlayAudio() error {
+	if m.card == nil {
+		return nil
+	}
+	m.audioPlayer = media.NewMp3Player()
+	for _, audioFile := range m.card.GetAudioFilenames() {
+		data, err := m.client.RetrieveMediaFile(audioFile)
+		if err != nil {
+			return err
+		}
+		go m.audioPlayer.Play(data)
+	}
+	return nil
+}
+
+func (m *Automata) StopAudio() error {
+	if m.audioPlayer == nil {
+		return nil
+	}
+	return m.audioPlayer.Stop()
 }
 
 func (m *Automata) AnswerCard(ease int) (err error) {
