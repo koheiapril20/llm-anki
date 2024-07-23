@@ -95,6 +95,21 @@ func (r *ChatGPTReviewer) appendMessage(message openai.ChatCompletionMessage) {
 	r.messages = append(r.messages, message)
 }
 
+func (r *ChatGPTReviewer) applyUserMessage(message string) {
+	r.appendMessage(openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleUser,
+		Content: message,
+	})
+}
+
+func (r *ChatGPTReviewer) applyAssistantMessage(message string) {
+	fmt.Println(message)
+	r.appendMessage(openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleAssistant,
+		Content: message,
+	})
+}
+
 func awaitInput() (input string, err error) {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("> ")
@@ -119,10 +134,7 @@ func (r *ChatGPTReviewer) awaitActionAnswer() {
 			fmt.Println("Please select the number.")
 			continue
 		}
-		r.appendMessage(openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleUser,
-			Content: input,
-		})
+		r.applyUserMessage(input)
 		return
 	}
 }
@@ -154,11 +166,7 @@ func (r *ChatGPTReviewer) Execute(deck string) (err error) {
 			for i, button := range r.am.CurrentCard().Buttons {
 				reply += fmt.Sprintf("[%d] %s (%s)\n", button, lookup[i], r.am.CurrentCard().NextReviews[i])
 			}
-			fmt.Println(reply)
-			r.appendMessage(openai.ChatCompletionMessage{
-				Role:    openai.ChatMessageRoleAssistant,
-				Content: reply,
-			})
+			r.applyAssistantMessage(reply)
 			r.am.PlayAudio()
 			r.awaitActionAnswer()
 			r.am.StopAudio()
@@ -178,12 +186,13 @@ func (r *ChatGPTReviewer) Execute(deck string) (err error) {
 				if _, err := r.am.NextCard(); err != nil {
 					return err
 				}
-				fmt.Println(r.am.CurrentCard().GetAudioFilenames())
-				fmt.Printf("Question: %s\n", format(r.am.CurrentCard().Question))
+				msg := fmt.Sprintf("Question: %s", format(r.am.CurrentCard().Question))
+				r.applyAssistantMessage(msg)
 				break
 			case reviewer.ActionAnswer:
 				num := action.(reviewer.AnswerAction).CardEase
-				fmt.Printf("action: answer %d", num)
+				msg := fmt.Sprintf("action: answer %d", num)
+				fmt.Println(msg)
 				r.am.AnswerCard(num)
 				break
 			default:
@@ -192,18 +201,14 @@ func (r *ChatGPTReviewer) Execute(deck string) (err error) {
 			continue
 		}
 
-		r.appendMessage(openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleUser,
-			Content: input,
-		})
+		r.applyUserMessage(input)
 		reply, err := r.createChatCompletion()
 		if err != nil {
 			fmt.Printf("Completion error: %v\n", err)
 			return err
 		}
-
-		fmt.Printf("[assistant] %s\n", reply)
-
+		msg := fmt.Sprintf("[assistant] %s", reply)
+		r.applyAssistantMessage(msg)
 	}
 }
 

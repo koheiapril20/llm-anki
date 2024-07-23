@@ -3,3 +3,4 @@ A chatbot companion that helps you learn and memorize using Anki flashcards. Ple
 
 ## Key Changes
 - Introduced a conversational UI
+- Introduced an mp3 player
